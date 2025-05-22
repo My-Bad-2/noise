@@ -37,3 +37,4 @@ build/
 
 # Configuration directory
 .vscode/
+.cache/
