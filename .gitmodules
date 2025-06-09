@@ -7,3 +7,7 @@
 	path = dependencies/ovmf-binaries/edk2-nightly
 	url = git@github.com:retrage/edk2-nightly.git
 	shallow = true
+[submodule "dependencies/freestnd-libs/freestnd-libs"]
+	path = dependencies/freestnd-libs/freestnd-libs
+	url = git@github.com:My-Bad-2/freestnd-libs.git
+	shallow = true

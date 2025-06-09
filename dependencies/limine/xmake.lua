@@ -8,11 +8,10 @@ target("limine")
 
     add_includedirs("limine", { public = true })
 
-    on_config(function (target) 
+    on_config(function (target)
         local binaries = {
             "$(projectdir)/dependencies/limine/limine/limine-uefi-cd.bin"
         }
-
         local uefi_binaries = { }
 
         if is_arch("x86_64") then
@@ -27,11 +26,19 @@ target("limine")
         target:set("values", "uefi-binaries", uefi_binaries)
     end)
 
-    on_build(function (target) 
-        local clang = import("lib.detect.find_tool")("clang")
+    on_build(function (target)
+        local cc = import("lib.detect.find_tool")("clang")
+
+        if cc == nil then
+            cc = import("lib.detect.find_tool")("gcc")
+        end
+
+        if cc == nil then
+            raise("C compiler not found for building limine executable!")
+        end
 
         os.mkdir(path.join(os.projectdir(), path.directory(target:targetfile())))
-        os.execv(clang["program"], {
+        os.execv(cc["program"], {
             path.join(os.projectdir(), "dependencies/limine/limine/limine.c"),
             "-o", path.join(os.projectdir(), target:targetfile())
         })

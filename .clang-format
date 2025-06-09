@@ -1,0 +1,63 @@
+Language: Cpp
+BasedOnStyle: Google
+
+# Indentation: Use 2 spaces for indentation
+UseTab: Never
+IndentWidth: 2
+TabWidth: 2 # Usually set to IndentWidth when UseTab is Never
+
+# Include Order Configuration
+# Rank:
+# 1. Project headers (ending with .hpp)
+# 2. C standard headers
+# 3. C++ std headers
+# All other headers will be sorted after these specified categories.
+IncludeBlocks: Regroup # Group includes by categories and add empty lines between groups.
+SortIncludes: true     # Sort includes alphabetically within categories and sort categories by priority.
+IncludeCategories:
+    - Regex:           '^\"(.*)\.hpp\"$'                   # 1. Project headers in quotes (e.g., "project/my_header.hpp")
+      Priority:        1
+      SortPriority:    1 # Define sort priority for explicit ordering if needed with Regroup
+    - Regex:           '^\<(.*)\.hpp\>$'                   # 1. Project headers in angle brackets (e.g., <project/my_header.hpp>)
+      Priority:        1
+      SortPriority:    1
+    - Regex:           '^<[a-zA-Z_][a-zA-Z0-9_]*\.h>$'     # 2. C standard library headers (e.g., <stdio.h>, <string.h>)
+      Priority:        2
+      SortPriority:    2
+    - Regex:           '^<c[a-zA-Z_][a-zA-Z0-9_]*>$'       # 3. C++ standard library C-compatibility headers (e.g., <cstdio>, <cstring>)
+      Priority:        3
+      SortPriority:    3
+    - Regex:           '^<[a-zA-Z0-9_]+>$'                 # 3. C++ standard library headers (e.g., <vector>, <iostream>, <type_traits>)
+      Priority:        3
+      SortPriority:    3
+    - Regex:           '^<.*>$'                            # 4. Other angle-bracketed headers (e.g., third-party libraries like <gtest/gtest.h>, system headers like <sys/types.h>)
+      Priority:        4
+      SortPriority:    4
+    - Regex:           '^\"(.*)\.(h|hh|hxx|c|cc|cpp|cxx)\"$' # 5. Other quoted project headers (not .hpp) or source files (if applicable for IWYU)
+      Priority:        5 # Or 1 if these are also primary project headers. Given .hpp was specified, these are secondary.
+      SortPriority:    5
+    - Regex:           '.*'                                # Catch-all for anything else, should ideally not be matched if categories are comprehensive
+      Priority:        100
+      SortPriority:    100
+
+
+# Other Google Style defaults are inherited, e.g.:
+# ColumnLimit: 80
+# AccessModifierOffset: -2
+# PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: None
+# BraceWrapping:
+#   AfterControlStatement: MultiLine
+#   AfterFunction: MultiLine
+#   AfterNamespace: MultiLine
+#   AfterObjCDeclaration: MultiLine
+#   AfterStruct: MultiLine
+#   AfterUnion: MultiLine
+#   AfterExternBlock: MultiLine
+#   AfterClass: MultiLine
+#   AfterEnum: MultiLine
+#   BeforeCatch: MultiLine
+#   BeforeElse: MultiLine
+#   SplitEmptyFunction: true
+#   SplitEmptyRecord: true
+#   SplitEmptyNamespace: true
