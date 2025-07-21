@@ -12,6 +12,7 @@ target("noise-dependencies-nolink")
     add_deps("klibc-headers")
     add_deps("noise-headers")
     add_deps("libstdc++-headers")
+    add_deps("libs-headers")
 
 target("noise.elf")
     set_default(false)

@@ -27,13 +27,13 @@ void initialize() {
   drivers::install(&uart_driver);
 }
 
-void test() {
-  uart_driver.putchar('H');
-  uart_driver.putchar('E');
-  uart_driver.putchar('L');
-  uart_driver.putchar('L');
-  uart_driver.putchar('O');
-  uart_driver.putchar('!');
-  uart_driver.putchar('\n');
+void write(char ch) {
+  uart_driver.putchar(ch);
+}
+
+void write(std::string_view str) {
+  for (const auto ch : str) {
+    write(ch);
+  }
 }
 }  // namespace arch::x86_64

@@ -40,8 +40,12 @@ bool UartDriver::initialize() {
   this->write(MODEM_CONTROL, MODEM_RTS | MODEM_DTR | MODEM_OUT2 | MODEM_OUT1);
 
   this->write(DATA, 0xae);
+  bool test = (this->read(DATA) == 0xae);
 
-  return (this->read(DATA) == 0xae);
+  // Backspace to remove the undefined ASCII value `0xae`
+  this->write(DATA, 0x8);
+
+  return test;
 }
 
 void UartDriver::shutdown() {}

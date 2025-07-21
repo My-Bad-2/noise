@@ -7,5 +7,5 @@
 namespace arch {
 using ARCH_NAMESPACE_PREFIX::halt;
 using ARCH_NAMESPACE_PREFIX::initialize;
-using ARCH_NAMESPACE_PREFIX::test;
+using ARCH_NAMESPACE_PREFIX::write;
 }  // namespace arch

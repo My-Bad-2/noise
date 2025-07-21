@@ -8,6 +8,7 @@ target("noise-klibc")
     set_default(false)
     set_kind("static")
 
+    add_files("src/*.cpp")
     add_files("src/*/*.cpp")
     
     add_deps("klibc-headers")
