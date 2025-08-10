@@ -4,7 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__) && (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
+#if (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__) && \
+    (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
 #error Unknown Endianness Detected!
 #endif
 

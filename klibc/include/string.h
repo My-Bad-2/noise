@@ -37,7 +37,8 @@ __attribute__((nonnull(1)));
 size_t strnlen(const char* str, size_t max_len) __attribute__((pure))
 __attribute__((nonnull(1)));
 
-char* strchr(const char* str, int ch) __attribute__((pure)) __attribute__((nonnull(1)));
+char* strchr(const char* str, int ch) __attribute__((pure))
+__attribute__((nonnull(1)));
 
 #ifdef __cplusplus
 }

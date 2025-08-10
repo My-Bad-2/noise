@@ -7,7 +7,8 @@ namespace logger {
 template <typename Sink>
 struct logger {
  public:
-  logger(Sink sink = {}) : m_sink(std::move(sink)) {}
+  logger(Sink sink = {}) : m_sink(std::move(sink)) {
+  }
 
   logger(const logger&) = delete;
   logger& operator=(const logger&) = delete;
@@ -21,8 +22,8 @@ struct logger {
 
   void append(char ch) {
     constexpr size_t buf_size = sizeof(m_buffer) / sizeof(m_buffer[0]);
-    
-    if((this->m_offset + 1) == buf_size) {
+
+    if ((this->m_offset + 1) == buf_size) {
       this->m_buffer[this->m_offset] = '\0';
       this->flush();
       this->m_offset = 0;

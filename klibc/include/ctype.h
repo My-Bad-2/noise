@@ -3,7 +3,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 int isalnum(int ch);
 int isalpha(int ch);
@@ -22,9 +22,8 @@ int tolower(int ch);
 int toupper(int ch);
 int toascii(int ch);
 
-
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
-#endif // CTYPE_H
+#endif  // CTYPE_H

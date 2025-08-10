@@ -2,9 +2,13 @@
 #define KERNEL_LOG_HPP
 
 #include <arch/arch.hpp>
-#include <logger.hpp>
+
+#include <printf_config.h>
 
 #include <source_location>
+#include <utility>
+
+#include <printf/printf.h>
 
 #define debug(...) \
   log::write(log::DEBUG, std::source_location::current(), __VA_ARGS__)
@@ -22,16 +26,6 @@
   log::write(log::PANIC, std::source_location::current(), __VA_ARGS__)
 
 namespace log {
-struct log_sink {
-  void operator()(char ch) {
-    arch::write(ch);
-  }
-
-  void operator()(const char* str) {
-    arch::write(str);
-  }
-};
-
 enum log_level {
   DEBUG,
   INFO,
@@ -71,24 +65,16 @@ constexpr const char* level_label(log_level level) {
 }
 
 template <typename... Args>
-void write(log_level level, std::source_location loc, std::string_view str,
+void write(log_level level, std::source_location loc, const char* str,
            Args&&... args) {
-  log_sink sink = {};
-  logger::logger logger = {sink};
+  printf(level_color(level));
+  printf(level_label(level));
 
-  sink(level_color(level));
-  sink(level_label(level));
+  printf("[%s] [%s] ", loc.file_name(), loc.function_name());
+  printf(str, std::forward<Args>(args)...);
 
-  auto fmt = format::fmt("[{}] [{}] ", loc.file_name(), loc.function_name());
-  logger.write(fmt);
-
-  auto fmt1 = format::fmt(str, std::forward<Args>(args)...);
-  logger.write(fmt1);
-
-  logger.flush();
-
-  sink("\033[0m");
-  sink('\n');
+  arch::write("\033[0m");
+  arch::write('\n');
 
   if (level == PANIC) {
     arch::halt(false);

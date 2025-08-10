@@ -12,7 +12,7 @@ target("noise-dependencies-nolink")
     add_deps("klibc-headers")
     add_deps("noise-headers")
     add_deps("libstdc++-headers")
-    add_deps("libs-headers")
+    -- add_deps("libs-headers")
 
 target("noise.elf")
     set_default(false)
@@ -25,6 +25,7 @@ target("noise.elf")
     add_deps("noise-dependencies-nolink")
 
     add_deps("libs")
+    add_deps("printf")
 
     if not is_arch("x86_64") then
         -- remove files from other archs
@@ -49,7 +50,11 @@ target("noise.elf")
         local git_commit_id = os.iorun("git rev-parse --short HEAD")
         git_commit_id = string.gsub(git_commit_id, "%s*$", "")
 
+        import("core.project.project")
+
         target:add("defines", "GIT_COMMIT_ID=\"" .. git_commit_id .. "\"")
+        target:add("defines", "KERNEL_VERSION=\"" .. project.version() .. "\"")
+        target:add("defines", "KERNEL_NAME=\"" .. project.name() .. "\"")
     end)
 
     after_load(function (target)

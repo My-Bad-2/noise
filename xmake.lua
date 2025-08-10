@@ -14,14 +14,14 @@ set_allowedarchs("x86_64")
 set_defaultplat("x86_64")
 
 -- debug
-if is_mode("debug") then 
+if is_mode("debug") then
     set_symbols("debug")
     set_optimize("none")
 -- optimized debug
-elseif is_mode("releasedbg") then 
+elseif is_mode("releasedbg") then
     set_symbols("debug")
     set_optimize("fastest")
-elseif is_mode("release") then 
+elseif is_mode("release") then
     set_optimize("fastest")
 end
 
@@ -106,10 +106,10 @@ toolchain("kernel-clang")
     set_toolset("sh", "clang++", "clang")
 
     set_toolset("ld", "ld.lld", "lld")
-    
+
     set_toolset("ar", "llvm-ar", "ar")
     set_toolset("strip", "llvm-strip", "strip")
-    
+
     add_defines("LIMINE_API_REVISION=2")
 
     on_load(function (toolchain)
@@ -146,13 +146,13 @@ toolchain("kernel-clang")
 
         local target = ""
 
-        if is_mode("releasesmall") or is_mode("release") then 
+        if is_mode("releasesmall") or is_mode("release") then
             toolchain:add("defines", "NOISE_DEBUG=0");
-        else 
+        else
             toolchain:add("defines", "NOISE_DEBUG=1");
         end
 
-        if is_arch("x86_64") then 
+        if is_arch("x86_64") then
             target = "x86_64-unknown-unknown-elf"
 
             multi_insert(cx_args,
@@ -194,10 +194,10 @@ toolchain("gcc-x86_64-elf")
     set_toolset("sh", "x86_64-elf-g++", "x86_64-elf-gcc")
 
     set_toolset("ld", "x86_64-elf-ld")
-    
+
     set_toolset("ar", "x86_64-elf-ar", "ar")
     set_toolset("strip", "x86_64-elf-strip", "strip")
-    
+
     add_defines("LIMINE_API_REVISION=2")
 
     on_load(function (toolchain)
@@ -230,13 +230,13 @@ toolchain("gcc-x86_64-elf")
             "-Wl,-shared"
         }
 
-        if is_mode("releasesmall") or is_mode("release") then 
+        if is_mode("releasesmall") or is_mode("release") then
             toolchain:add("defines", "NOISE_DEBUG=0");
-        else 
+        else
             toolchain:add("defines", "NOISE_DEBUG=1");
         end
 
-        if is_arch("x86_64") then 
+        if is_arch("x86_64") then
             multi_insert(cx_args,
                 "-march=x86-64",
                 "-mno-red-zone",
@@ -273,7 +273,7 @@ includes("dependencies/xmake.lua")
 -- targets.build
 
 includes("klibc/xmake.lua")
-includes("libs/xmake.lua")
+-- includes("libs/xmake.lua")
 includes("kernel/xmake.lua")
 
 target("iso")
@@ -285,7 +285,7 @@ target("iso")
         os.rm(get_targetfile(target:targetdir(), "image", ".iso"))
     end)
 
-    on_build(function (target) 
+    on_build(function (target)
         import("core.project.project")
         import("core.project.depend")
         import("lib.detect.find_program")
@@ -294,7 +294,7 @@ target("iso")
         target:set("values", "targetfile", targetfile)
 
         local kernel = project.target("noise.elf")
-        
+
         local iso_dirname = "noise.iso.dir"
         local iso_dir = path.join(os.tmpdir(), iso_dirname)
         local iso_dir_b = path.join(iso_dir, "boot")
@@ -322,7 +322,7 @@ target("iso")
                 "-boot-info-table"
             )
         end
-        
+
         multi_insert(xorriso_args,
             "--efi-boot", "boot/limine/limine-uefi-cd.bin",
             "-efi-boot-part", "--efi-boot-image",

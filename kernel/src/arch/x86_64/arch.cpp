@@ -37,9 +37,9 @@ void write(char ch) {
   uart_driver.putchar(ch);
 }
 
-void write(std::string_view str) {
-  for (const auto ch : str) {
-    write(ch);
+void write(const char* str) {
+  while (*str) {
+    write(*str++);
   }
 }
 }  // namespace arch::x86_64

@@ -48,5 +48,6 @@ bool UartDriver::initialize() {
   return test;
 }
 
-void UartDriver::shutdown() {}
+void UartDriver::shutdown() {
+}
 }  // namespace drivers

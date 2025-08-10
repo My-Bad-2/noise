@@ -351,4 +351,4 @@ void copy_backward_dest_aligned(uintptr_t dest, uintptr_t src, size_t len) {
 exit:
   reinterpret_cast<qword_t *>(dest)[3] = merge(a, shift_1, b, shift_2);
 }
-}  // namespace string
+}  // namespace internal
