@@ -7,7 +7,7 @@ target("noise-headers")
 
 target("noise-dependencies-nolink")
     set_kind("phony")
-   
+
     add_deps("limine-headers")
     add_deps("klibc-headers")
     add_deps("noise-headers")
@@ -34,7 +34,7 @@ target("noise.elf")
         local flags = {
             "-masm=intel"
         }
-      
+
         add_cxflags(flags, { force = true })
         add_asflags(flags, { force = true })
 
@@ -44,6 +44,13 @@ target("noise.elf")
             { force = true }
         )
     end
+
+    on_load(function (target)
+        local git_commit_id = os.iorun("git rev-parse --short HEAD")
+        git_commit_id = string.gsub(git_commit_id, "%s*$", "")
+
+        target:add("defines", "GIT_COMMIT_ID=\"" .. git_commit_id .. "\"")
+    end)
 
     after_load(function (target)
         local libs_dep = target:deps()["libs"]

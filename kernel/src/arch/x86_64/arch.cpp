@@ -1,12 +1,14 @@
 #include "arch/x86_64/arch.hpp"
 #include "arch/x86_64/cpu/cpu.hpp"
+#include "arch/x86_64/cpu/gdt.hpp"
 #include "arch/x86_64/drivers/uart.hpp"
 #include "drivers/manager.hpp"
 
 namespace arch::x86_64 {
 namespace {
 drivers::UartDriver uart_driver;
-}
+cpu::Gdt gdt;
+}  // namespace
 
 void halt(bool interrupts) {
   if (interrupts) {
@@ -25,6 +27,10 @@ void initialize() {
   uart_driver.set_port(drivers::PORT_A);
 
   drivers::install(&uart_driver);
+
+  cpu::disable_interrupts();
+  gdt.initialize();
+  cpu::enable_interrupts();
 }
 
 void write(char ch) {

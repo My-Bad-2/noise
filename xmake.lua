@@ -153,7 +153,7 @@ toolchain("kernel-clang")
         end
 
         if is_arch("x86_64") then 
-            target = "x86_64-elf"
+            target = "x86_64-unknown-unknown-elf"
 
             multi_insert(cx_args,
                 "-march=x86-64",

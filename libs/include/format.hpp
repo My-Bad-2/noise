@@ -15,7 +15,7 @@
 
 namespace std {
 // Otherwise, the Linker imports `std::terminate()` from `libstdc++.a`
-void terminate() noexcept {
+inline void terminate() noexcept {
   while (true);
 }
 }  // namespace std
