@@ -11,3 +11,7 @@
 	path = dependencies/freestnd-libs/freestnd-libs
 	url = git@github.com:My-Bad-2/freestnd-libs.git
 	shallow = true
+[submodule "dependencies/printf/printf"]
+	path = dependencies/printf/printf
+	url = https://github.com/eyalroz/printf.git
+	shallow = true
