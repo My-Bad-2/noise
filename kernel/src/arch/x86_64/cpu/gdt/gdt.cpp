@@ -1,5 +1,5 @@
 #include "arch/x86_64/cpu/gdt.hpp"
-#include <log.hpp>
+#include "log.hpp"
 
 #define KERNEL_CODE 1
 #define KERNEL_DATA 2
@@ -42,10 +42,6 @@ void GdtRegister::load() {
 
 void Gdt::initialize() {
   this->table.fill(&this->tss);
-
-#ifdef NOISE_DEBUG
-  this->table.print();
-#endif
 
   GdtRegister gdtr = {&this->table};
   gdtr.load();

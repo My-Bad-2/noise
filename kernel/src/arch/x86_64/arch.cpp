@@ -3,11 +3,13 @@
 #include "arch/x86_64/cpu/gdt.hpp"
 #include "arch/x86_64/drivers/uart.hpp"
 #include "drivers/manager.hpp"
+#include "arch/x86_64/cpu/idt.hpp"
 
 namespace arch::x86_64 {
 namespace {
 drivers::UartDriver uart_driver;
 cpu::Gdt gdt;
+cpu::Idt idt;
 }  // namespace
 
 void halt(bool interrupts) {
@@ -29,7 +31,10 @@ void initialize() {
   drivers::install(&uart_driver);
 
   cpu::disable_interrupts();
+
   gdt.initialize();
+  idt.initialize();
+
   cpu::enable_interrupts();
 }
 
