@@ -1,11 +1,16 @@
 #include "arch/x86_64/arch.hpp"
 #include "arch/x86_64/cpu/exceptions.hpp"
+#include "arch/x86_64/cpu/pic.hpp"
 #include "log.hpp"
 
 namespace arch::x86_64::cpu {
 namespace {
 InterruptHandler handlers[platformMax - platformInterruptBase + 1];
 InterruptHandler bad_handler;
+
+inline void send_eoi(uint8_t vector) {
+  Pic::eoi(vector);
+}
 }  // namespace
 
 void IFrame::print() const {
@@ -65,6 +70,8 @@ extern "C" void exception_handler(IFrame* frame) {
   if (!interrupt_handled) {
     arch::x86_64::halt(false);
   }
+
+  send_eoi(frame->vector);
 }
 
 extern "C" void nmi_handler(NmiFrame* frame) {

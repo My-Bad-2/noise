@@ -1,9 +1,10 @@
 #include "arch/x86_64/arch.hpp"
 #include "arch/x86_64/cpu/cpu.hpp"
 #include "arch/x86_64/cpu/gdt.hpp"
+#include "arch/x86_64/cpu/idt.hpp"
+#include "arch/x86_64/cpu/pic.hpp"
 #include "arch/x86_64/drivers/uart.hpp"
 #include "drivers/manager.hpp"
-#include "arch/x86_64/cpu/idt.hpp"
 
 namespace arch::x86_64 {
 namespace {
@@ -34,6 +35,8 @@ void initialize() {
 
   gdt.initialize();
   idt.initialize();
+
+  cpu::Pic::remap();
 
   cpu::enable_interrupts();
 }

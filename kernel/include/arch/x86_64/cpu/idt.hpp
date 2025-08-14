@@ -89,6 +89,8 @@ class Idt {
  private:
   IdtTable table;
 };
+
+void send_eoi(uint8_t vector);
 }  // namespace arch::x86_64::cpu
 
 #endif  // ARCH_CPU_IDT_HPP
