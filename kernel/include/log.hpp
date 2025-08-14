@@ -47,6 +47,8 @@ constexpr const char* level_color(log_level level) {
     case PANIC:
       return "\033[1;91m";
   }
+
+  return nullptr;
 }
 
 constexpr const char* level_label(log_level level) {
@@ -62,6 +64,8 @@ constexpr const char* level_label(log_level level) {
     case PANIC:
       return "[PANIC  ]";
   }
+
+  return nullptr;
 }
 
 template <typename... Args>

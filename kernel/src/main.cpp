@@ -2,6 +2,7 @@
 #include "drivers/manager.hpp"
 #include "log.hpp"
 #include "version.hpp"
+#include "memory/memory.hpp"
 
 #include <printf_config.h>
 
@@ -14,10 +15,11 @@ extern "C" void putchar_(char c) {
 extern "C" void kmain() {
   arch::initialize();
   drivers::initialize();
+  memory::initialize();
 
   KernelInfo info;
   info.print();
 
-  info("Hello, World! {}", "testing");
+  info("Hello, World!");
   arch::halt();
 }
