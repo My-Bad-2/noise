@@ -19,6 +19,20 @@ volatile limine_hhdm_request hhdm_request = {
   .response = nullptr,
 };
 
+__attribute__((used)) __attribute__((section(".requests")))
+volatile limine_executable_file_request file_request = {
+  .id = LIMINE_EXECUTABLE_FILE_REQUEST,
+  .revision = 3,
+  .response = nullptr,
+};
+
+__attribute__((used)) __attribute__((section(".requests")))
+volatile limine_executable_address_request address_request = {
+  .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
+  .revision = 3,
+  .response = nullptr,
+};
+
 __attribute__((used)) __attribute__((section(".requests_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
 

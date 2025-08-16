@@ -19,7 +19,7 @@
 #define warning(...) \
   log::write(log::WARNING, std::source_location::current(), __VA_ARGS__)
 
-#define error(...) \
+#define err(...) \
   log::write(log::ERROR, std::source_location::current(), __VA_ARGS__)
 
 #define panic(...) \

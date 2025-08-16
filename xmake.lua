@@ -273,7 +273,7 @@ includes("dependencies/xmake.lua")
 -- targets.build
 
 includes("klibc/xmake.lua")
--- includes("libs/xmake.lua")
+includes("libs/xmake.lua")
 includes("kernel/xmake.lua")
 
 target("iso")

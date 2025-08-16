@@ -9,6 +9,8 @@
 #include <concepts>
 #include <type_traits>
 
+#define FFS(x) __builtin_ffsll(x)
+
 namespace memory {
 enum PageSize : size_t {
   PageSize4KiB = 0x1000,
@@ -38,7 +40,7 @@ inline constexpr auto div_roundup(std::unsigned_integral auto addr,
 
 bool is_aligned(std::unsigned_integral auto addr,
                 std::unsigned_integral auto base) {
-  return (uintptr_t(addr) & uintptr_t(base)) == 0;
+  return (uintptr_t(addr) & (uintptr_t(base) - 1)) == 0;
 }
 
 inline constexpr bool is_higher_half(auto val) {
