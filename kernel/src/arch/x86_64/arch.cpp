@@ -5,6 +5,7 @@
 #include "arch/x86_64/cpu/pic.hpp"
 #include "arch/x86_64/drivers/uart.hpp"
 #include "drivers/manager.hpp"
+#include "arch/x86_64/registers.h"
 
 namespace arch::x86_64 {
 namespace {
@@ -23,6 +24,24 @@ void halt(bool interrupts) {
       cpu::disable_interrupts();
       cpu::halt();
     }
+  }
+}
+
+bool int_status() {
+  size_t rflags = 0;
+
+  asm volatile(
+      "pushfq \n\t"
+      "pop %[rflags]"
+      : [rflags] "=r"(rflags));
+  return rflags & FLAGS_IF;
+}
+
+void int_switch(bool on) {
+  if(on) {
+    cpu::disable_interrupts();
+  } else {
+    cpu::enable_interrupts();
   }
 }
 

@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <expected>
+#include "spinlock.hpp"
 
 // The lowest order block size (2^0 * PageSize4KiB = 4 KiB)
 #define MIN_ORDER 0
@@ -21,13 +21,6 @@ struct FreeBlockNode {
 struct PageMetadata {
   bool is_free;
   uint8_t order : 7;
-};
-
-enum class AllocationError {
-  ErrorRequestTooLarge,
-  ErrorOutOfMemory,
-  ErrorAddressNotAligned,
-  ErrorAddressIsNull,
 };
 
 class PhysicalMemoryManager {
@@ -81,6 +74,8 @@ class PhysicalMemoryManager {
   size_t total_memory = 0;
   size_t total_pages = 0;
   size_t usable_memory = 0;
+
+  mutable libs::SpinLock lock;
 };
 }  // namespace memory
 

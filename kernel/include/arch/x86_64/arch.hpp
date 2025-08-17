@@ -3,6 +3,12 @@
 
 namespace arch::x86_64 {
 [[noreturn]] void halt(bool interrupts = true);
+inline void pause() {
+  asm volatile("pause");
+}
+
+bool int_status();
+void int_switch(bool on);
 
 void initialize();
 void write(char ch);
