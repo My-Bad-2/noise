@@ -2,7 +2,6 @@
 
 #include <cpuid.h>
 #include <string.h>
-#include <cstdint>
 
 #include <bits/feats.h>
 
@@ -45,6 +44,31 @@ const CpuidLeaf* get_leaf(CpuidLeafNum leaf) {
   return &cpuid_ext[leaf - CpuidExtBase];
 }
 }  // namespace
+
+bool test_feature(CpuidBit bit) {
+  if (bit.word > 3 || bit.bit > 31) {
+    return false;
+  }
+
+  const CpuidLeaf* leaf = get_leaf(bit.leaf_num);
+
+  if (leaf == nullptr) {
+    return false;
+  }
+
+  switch (bit.word) {
+    case 0:
+      return !!((1u << bit.bit) & leaf->a);
+    case 1:
+      return !!((1u << bit.bit) & leaf->b);
+    case 2:
+      return !!((1u << bit.bit) & leaf->c);
+    case 3:
+      return !!((1u << bit.bit) & leaf->d);
+    default:
+      return false;
+  }
+}
 
 void initialize() {
   __cpuid(0, cpuid[0].a, cpuid[0].b, cpuid[0].c, cpuid[0].d);
@@ -112,8 +136,9 @@ void initialize() {
 
   const CpuidLeaf* leaf = get_leaf(CpuidModelFeatures);
 
-  if(leaf != nullptr) {
-    model_info.processor_type = static_cast<uint8_t>(bits_shift(leaf->a, 13, 12));
+  if (leaf != nullptr) {
+    model_info.processor_type =
+        static_cast<uint8_t>(bits_shift(leaf->a, 13, 12));
     model_info.family = static_cast<uint8_t>(bits_shift(leaf->a, 11, 8));
     model_info.model = static_cast<uint8_t>(bits_shift(leaf->a, 7, 4));
     model_info.stepping = static_cast<uint8_t>(bits_shift(leaf->a, 3, 0));
@@ -121,13 +146,19 @@ void initialize() {
     model_info.display_family = model_info.family;
     model_info.display_model = model_info.model;
 
-    if(model_info.family == 0xf) {
-      model_info.display_family += static_cast<uint8_t>(bits_shift(leaf->a, 27, 20));
+    if (model_info.family == 0xf) {
+      model_info.display_family +=
+          static_cast<uint8_t>(bits_shift(leaf->a, 27, 20));
     }
 
-    if((model_info.family == 0xf) || model_info.family == 0x6) {
-      model_info.display_family += static_cast<uint8_t>(bits_shift(leaf->a, 19, 16) << 4);
+    if ((model_info.family == 0xf) || model_info.family == 0x6) {
+      model_info.display_family +=
+          static_cast<uint8_t>(bits_shift(leaf->a, 19, 16) << 4);
     }
   }
+}
+
+ModelInfo get_model_info() {
+  return model_info;
 }
 }  // namespace arch::x86_64::cpu

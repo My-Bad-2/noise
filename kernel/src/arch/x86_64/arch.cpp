@@ -49,6 +49,7 @@ void initialize() {
   uart_driver.set_port(drivers::PORT_A);
 
   drivers::install(&uart_driver);
+  cpu::initialize();
 
   cpu::disable_interrupts();
 

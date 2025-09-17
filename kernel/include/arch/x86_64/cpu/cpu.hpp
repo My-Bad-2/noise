@@ -1,4 +1,3 @@
-#include <cstdint>
 #ifndef ARCH_CPU_HPP
 #define ARCH_CPU_HPP 1
 
@@ -128,28 +127,6 @@ enum x86_hypervisor_list {
   HypervisorKvm,
 };
 
-enum MicroarchList {
-  MicroarchUnknown,
-  MicroarchIntelNehalem,
-  MicroarchIntelSandyBridge,
-  MicroarchIntelIvyBridge,
-  MicroarchIntelHaswll,
-  MicroarchIntelBroadwell,
-  MicroarchIntelSkylake,
-  MicroarchIntelGoldmont,
-  MicroarchIntelGoldmontPlus,
-  MicroarchIntelCannonLake,
-  MicroarchIntelIceLake,
-  MicroarchIntelTigerLake,
-  MicroarchIntelAlderLake,
-  MicroarchIntelRaptorLake,
-  MicroarchIntelArrowLake,
-  MicroarchIntelPantherLake,
-  MicroarchAMDJaguar,
-  MicroarchAMDBulldozer,
-  MicroarchAMDZen,
-};
-
 struct CpuidBit {
   CpuidLeafNum leaf_num;
   uint8_t word;
@@ -201,6 +178,7 @@ inline void write_cr3(uintptr_t addr) {
 }
 
 bool test_feature(CpuidBit bit);
+ModelInfo get_model_info();
 void initialize();
 }  // namespace arch::x86_64::cpu
 
