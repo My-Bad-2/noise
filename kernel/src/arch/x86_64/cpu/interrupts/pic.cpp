@@ -123,7 +123,6 @@ void Pic::clear_mask(uint8_t irq) {
 }
 
 void Pic::eoi(uint8_t irq) {
-  uint8_t port = Pic1Command;
   irq -= platformInterruptBase;
 
   if (irq >= 8) {

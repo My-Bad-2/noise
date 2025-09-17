@@ -50,7 +50,7 @@ class PhysicalMemoryManager {
   void deallocate(void* ptr);
 
   template <typename T = void*>
-  void* allocate(size_t size, bool clear = false) {
+  T allocate(size_t size, bool clear = false) {
     return reinterpret_cast<T>(this->allocate(size, clear));
   }
 

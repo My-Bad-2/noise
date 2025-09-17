@@ -7,6 +7,8 @@ add_rules("plugin.compile_commands.autoupdate", { outputdir = "build" })
 
 set_policy("run.autobuild", true)
 set_policy("package.install_locally", true)
+set_policy("build.warning", true)
+set_warnings("all")
 
 set_languages("cxxlatest", "clatest")
 
@@ -97,93 +99,94 @@ local bios = false
 
 -- toolchain
 
-toolchain("kernel-clang")
-    set_kind("standalone")
+-- TODO: Encountered some issues while compiling with Clang. Fix it later.
+-- toolchain("kernel-clang")
+--     set_kind("standalone")
 
-    set_toolset("as", "clang")
-    set_toolset("cc", "clang")
-    set_toolset("cxx", "clang++")
-    set_toolset("sh", "clang++", "clang")
+--     set_toolset("as", "clang")
+--     set_toolset("cc", "clang")
+--     set_toolset("cxx", "clang++")
+--     set_toolset("sh", "clang++", "clang")
 
-    set_toolset("ld", "ld.lld", "lld")
+--     set_toolset("ld", "ld.lld", "lld")
 
-    set_toolset("ar", "llvm-ar", "ar")
-    set_toolset("strip", "llvm-strip", "strip")
+--     set_toolset("ar", "llvm-ar", "ar")
+--     set_toolset("strip", "llvm-strip", "strip")
 
-    add_defines("LIMINE_API_REVISION=2")
+--     add_defines("LIMINE_API_REVISION=2")
 
-    on_load(function (toolchain)
-        local cx_args = {
-            "-ffreestanding",
-            "-fno-stack-protector",
-            "-fno-omit-frame-pointer",
-            "-fno-strict-aliasing",
-            "-fstrict-vtable-pointers",
-            "-fno-pic",
-            "-mno-red-zone",
-        }
+--     on_load(function (toolchain)
+--         local cx_args = {
+--             "-ffreestanding",
+--             "-fno-stack-protector",
+--             "-fno-omit-frame-pointer",
+--             "-fno-strict-aliasing",
+--             "-fstrict-vtable-pointers",
+--             "-fno-pic",
+--             "-mno-red-zone",
+--         }
 
-        local c_args = {}
+--         local c_args = {}
 
-        local cxx_args = {
-            "-fno-rtti",
-            "-fno-exceptions",
-            "-fsized-deallocation",
-            "-fcheck-new",
-        }
+--         local cxx_args = {
+--             "-fno-rtti",
+--             "-fno-exceptions",
+--             "-fsized-deallocation",
+--             "-fcheck-new",
+--         }
 
-        local ld_args = {
-            "-nostdlib",
-            "-static",
-            "-znoexecstack",
-            "-zmax-page-size=0x1000",
-        }
+--         local ld_args = {
+--             "-nostdlib",
+--             "-static",
+--             "-znoexecstack",
+--             "-zmax-page-size=0x1000",
+--         }
 
-        local sh_args = {
-            "-fuse-ld=lld",
-            "-Wl,-shared"
-        }
+--         local sh_args = {
+--             "-fuse-ld=lld",
+--             "-Wl,-shared"
+--         }
 
-        local target = ""
+--         local target = ""
 
-        if is_mode("releasesmall") or is_mode("release") then
-            toolchain:add("defines", "NOISE_DEBUG=0");
-        else
-            toolchain:add("defines", "NOISE_DEBUG=1");
-        end
+--         if is_mode("releasesmall") or is_mode("release") then
+--             toolchain:add("defines", "NOISE_DEBUG=0");
+--         else
+--             toolchain:add("defines", "NOISE_DEBUG=1");
+--         end
 
-        if is_arch("x86_64") then
-            target = "x86_64-unknown-unknown-elf"
+--         if is_arch("x86_64") then
+--             target = "x86_64-unknown-unknown-elf"
 
-            multi_insert(cx_args,
-                "-march=x86-64",
-                "-mno-red-zone",
-                "-mno-mmx",
-                "-mno-sse",
-                "-mno-sse2",
-                "-mno-80387",
-                "-mcmodel=kernel"
-            )
-        end
+--             multi_insert(cx_args,
+--                 "-march=x86-64",
+--                 "-mno-red-zone",
+--                 "-mno-mmx",
+--                 "-mno-sse",
+--                 "-mno-sse2",
+--                 "-mno-80387",
+--                 "-mcmodel=kernel"
+--             )
+--         end
 
-        table.insert(cx_args, "--target=" .. target)
-        table.insert(sh_args, "--target=" .. target)
+--         table.insert(cx_args, "--target=" .. target)
+--         table.insert(sh_args, "--target=" .. target)
 
-        table.insert(c_args, get_config("extra_cflags"))
-        table.insert(cxx_args, get_config("extra_cxxflags"))
+--         table.insert(c_args, get_config("extra_cflags"))
+--         table.insert(cxx_args, get_config("extra_cxxflags"))
 
-        toolchain:add("cxxflags", cxx_args, { force = true})
-        toolchain:add("cxflags", cx_args, { force = true})
-        toolchain:add("cflags", c_args, { force = true})
+--         toolchain:add("cxxflags", cxx_args, { force = true})
+--         toolchain:add("cxflags", cx_args, { force = true})
+--         toolchain:add("cflags", c_args, { force = true})
 
-        toolchain:add("asflags", cxx_args, { force = true })
-        toolchain:add("asflags", cx_args, { force = true })
-        toolchain:add("asflags", c_args, { force = true })
+--         toolchain:add("asflags", cxx_args, { force = true })
+--         toolchain:add("asflags", cx_args, { force = true })
+--         toolchain:add("asflags", c_args, { force = true })
 
-        toolchain:add("ldflags", ld_args, { force = true })
-        toolchain:add("shflags", sh_args, { force = true })
-    end)
-toolchain_end()
+--         toolchain:add("ldflags", ld_args, { force = true })
+--         toolchain:add("shflags", sh_args, { force = true })
+--     end)
+-- toolchain_end()
 
 toolchain("gcc-x86_64-elf")
     set_kind("standalone")

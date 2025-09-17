@@ -179,7 +179,6 @@ void PhysicalMemoryManager::initialize(
   // Initialize all free lists to be empty (pointing to themselves)
   for (int i = 0; i < MAX_ORDER; ++i) {
     FreeBlockNode* node = &this->free_lists[i];
-
     node->next = node->prev = node;
   }
 

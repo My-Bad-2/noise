@@ -6,7 +6,6 @@
 namespace arch::x86_64::cpu {
 namespace {
 InterruptHandler handlers[platformMax - platformInterruptBase + 1];
-InterruptHandler bad_handler;
 
 inline void send_eoi(uint8_t vector) {
   Pic::eoi(vector);

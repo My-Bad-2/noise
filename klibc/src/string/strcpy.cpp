@@ -9,7 +9,7 @@ char* strcpy(char* str1, const char* str2) {
     str2++;
   }
 
-  return str1;
+  return ret;
 }
 
 char* strncpy(char* str1, const char* str2, size_t max_size) {

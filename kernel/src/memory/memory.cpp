@@ -5,6 +5,8 @@
 namespace memory {
 void initialize() {
   PhysicalMemoryManager& pmm = PhysicalMemoryManager::instance();
+
   pmm.initialize(boot::memmap_request.response);
+  pmm.print();
 }
 }  // namespace memory

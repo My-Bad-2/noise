@@ -1,7 +1,7 @@
 [submodule "dependencies/limine/limine"]
 	path = dependencies/limine/limine
-	url = git@github.com:limine-bootloader/limine.git
-	branch = v9.x-binary
+	url = https://codeberg.org/Limine/Limine.git
+	branch = v10.x-binary
 	shallow = true
 [submodule "dependencies/ovmf-binaries/edk2-nightly"]
 	path = dependencies/ovmf-binaries/edk2-nightly
