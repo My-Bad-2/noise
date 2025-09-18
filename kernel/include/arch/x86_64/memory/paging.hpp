@@ -42,7 +42,7 @@ namespace memory {
 namespace arch {
 struct PageTable {
   PageEntry entries[MAX_ENTRIES];
-} __attribute__((packed));
+};
 
 constexpr size_t is_valid_flags = x86_64::PtPresent;
 constexpr size_t new_table_flags =

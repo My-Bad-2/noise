@@ -5,25 +5,20 @@
 
 #include <printf_config.h>
 
-#include <source_location>
+#include <atomic>
 #include <utility>
 
 #include <printf/printf.h>
 
-#define debug(...) \
-  log::write(log::DEBUG, std::source_location::current(), __VA_ARGS__)
+#define debug(...) log::write(log::DEBUG, __VA_ARGS__)
 
-#define info(...) \
-  log::write(log::INFO, std::source_location::current(), __VA_ARGS__)
+#define info(...) log::write(log::INFO, __VA_ARGS__)
 
-#define warning(...) \
-  log::write(log::WARNING, std::source_location::current(), __VA_ARGS__)
+#define warning(...) log::write(log::WARNING, __VA_ARGS__)
 
-#define err(...) \
-  log::write(log::ERROR, std::source_location::current(), __VA_ARGS__)
+#define err(...) log::write(log::ERROR, __VA_ARGS__)
 
-#define panic(...) \
-  log::write(log::PANIC, std::source_location::current(), __VA_ARGS__)
+#define panic(...) log::write(log::PANIC, __VA_ARGS__)
 
 namespace log {
 enum log_level {
@@ -33,6 +28,24 @@ enum log_level {
   ERROR,
   PANIC,
 };
+
+#ifndef LOG_MIN_LEVEL
+#define LOG_MIN_LEVEL log::DEBUG
+#endif
+
+// Define LOG_DISABLE_COLOR to strip ANSI color sequences.
+#ifdef LOG_DISABLE_COLOR
+constexpr const char* level_color(log_level) {
+  return "";
+}
+
+constexpr const char* color_reset() {
+  return "";
+}
+#else
+constexpr const char* color_reset() {
+  return "\033[0m";
+}
 
 constexpr const char* level_color(log_level level) {
   switch (level) {
@@ -48,8 +61,9 @@ constexpr const char* level_color(log_level level) {
       return "\033[1;91m";
   }
 
-  return nullptr;
+  return "\033[0m";
 }
+#endif
 
 constexpr const char* level_label(log_level level) {
   switch (level) {
@@ -68,16 +82,25 @@ constexpr const char* level_label(log_level level) {
   return nullptr;
 }
 
+// Global monotonically increasing sequence number for log records.
+inline std::atomic<unsigned long long> g_log_seq{0};
+
 template <typename... Args>
-void write(log_level level, std::source_location loc, const char* str,
-           Args&&... args) {
-  printf(level_color(level));
-  printf(level_label(level));
+void write(log_level level, const char* fmt, Args&&... args) {
+  if (level < LOG_MIN_LEVEL) {
+    return;
+  }
 
-  printf("[%s] [%s] ", loc.file_name(), loc.function_name());
-  printf(str, std::forward<Args>(args)...);
+  const unsigned long long seq =
+      g_log_seq.fetch_add(1ULL, std::memory_order_relaxed);
 
-  arch::write("\033[0m");
+  // Prefix now only: color + [SEQ][LEVEL]
+  printf("%s[%06llu]%s%s%s ", level_color(level), seq, color_reset(),
+         level_color(level), level_label(level));
+
+  printf(fmt, std::forward<Args>(args)...);
+
+  arch::write(color_reset());
   arch::write('\n');
 
   if (level == PANIC) {

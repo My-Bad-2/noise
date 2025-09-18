@@ -1,6 +1,7 @@
 #include "arch/x86_64/cpu/cpu.hpp"
 #include "arch/x86_64/memory/paging.hpp"
 #include "boot.hpp"
+#include "log.hpp"
 #include "memory/memory.hpp"
 #include "memory/pagemap.hpp"
 
@@ -10,11 +11,13 @@
 
 namespace memory::arch::x86_64 {
 namespace {
-bool pml3_available = false;
-int max_levels = 0;
+bool pml3_available =
+    false;           // CPU supports 1GiB pages (PDPT / PML3 huge pages)
+int max_levels = 0;  // 4 or 5 level paging
 }  // namespace
 
 PageSize from_type(PageSizeType type) noexcept {
+  // Translate abstract sizes to concrete byte values (compile-time constants)
   switch (type) {
     case PageLarge:
       return PageSize1GiB;
@@ -27,6 +30,8 @@ PageSize from_type(PageSizeType type) noexcept {
 }
 
 PageSizeType max_page_size(size_t size) noexcept {
+  // Heuristic: choose largest page size that can fully cover 'size'
+  // (Caller may still be downgraded by fix_page_size() if unsupported.)
   if (size >= PageSize1GiB) {
     return PageLarge;
   }
@@ -40,6 +45,8 @@ PageSizeType max_page_size(size_t size) noexcept {
 
 uintptr_t convert_flags(size_t flags, CachingType cache,
                         PageSizeType type) noexcept {
+  // Convert abstract memory + caching flags into architecture PTE bits.
+  // This does NOT include the physical address bits.
   uintptr_t ret = PtPresent;
 
   if (flags & FlagWrite) {
@@ -91,6 +98,8 @@ uintptr_t convert_flags(size_t flags, CachingType cache,
 
 std::pair<size_t, CachingType> convert_flags(size_t flags,
                                              PageSizeType type) noexcept {
+  // Reverse conversion: hardware flags -> abstract flags + inferred cache mode.
+  // Used when inspecting existing mappings.
   size_t ret = FlagExecute;
   CachingType cache = CachingType::WriteBack;
 
@@ -136,10 +145,13 @@ std::pair<size_t, CachingType> convert_flags(size_t flags,
 }
 
 PageSizeType fix_page_size(PageSizeType type) noexcept {
+  // Downgrade large (1GiB) pages if CPU/firmware did not enable them.
   if ((type == PageLarge) && !pml3_available) {
+    debug(
+        "[ARCH][PAGING] Downgrading 1GiB page request -> 2MiB (no PML3 huge "
+        "pages)");
     return PageMedium;
   }
-
   return type;
 }
 }  // namespace memory::arch::x86_64
@@ -147,6 +159,22 @@ PageSizeType fix_page_size(PageSizeType type) noexcept {
 namespace memory {
 std::optional<std::reference_wrapper<PageEntry>> PageMap::get_page_entry(
     uintptr_t virt_addr, PageSizeType page_size, bool allocate) noexcept {
+  // Walk page table hierarchy to the entry matching `virt_addr` at the level
+  // implied by `page_size`.
+  //
+  // Index math:
+  //   shift_start = bit position of the highest level index (L4 or L5)
+  //   ret_idx     = traversal depth (0-based) where we stop:
+  //                 (levels_used - page_size - 1)
+  //                 page_size: 0=4K (deepest), 1=2M, 2=1G
+  //
+  // Example (4-level, 4K):
+  //   levels=4, page_size=0 -> ret_idx = 3 (PTE level)
+  // Example (4-level, 2M):
+  //   page_size=1 -> ret_idx = 2 (PDE with PS)
+  // Example (5-level, 1G):
+  //   levels=5, page_size=2 -> ret_idx = ( (5?4:5) - 2 - 1 ) = 1 (PDPTE level)
+
   const int levels = arch::x86_64::max_levels;
   const int shift_start = 12 + (levels - 1) * 9;
   const int ret_idx = ((levels == 5) ? 4 : levels) - page_size - 1;
@@ -164,6 +192,7 @@ std::optional<std::reference_wrapper<PageEntry>> PageMap::get_page_entry(
     pml = get_next_lvl(entry, allocate);
 
     if (pml == nullptr) {
+      // Allocation not allowed or failed above; caller handles nullopt.
       return std::nullopt;
     }
 
@@ -174,17 +203,23 @@ std::optional<std::reference_wrapper<PageEntry>> PageMap::get_page_entry(
 }
 
 void PageMap::load() noexcept {
+  // Install this page map into CR3 (TLB implicitly flushed).
   const uintptr_t addr = reinterpret_cast<uintptr_t>(this->root_tbl);
   ::arch::x86_64::cpu::write_cr3(addr);
 }
 
 void PageMap::invalidate_page(uintptr_t addr) noexcept {
+  // Invalidate a single page (shootdown for this CPU).
   ::arch::x86_64::cpu::invalidate_page(addr);
 }
 
 PageMap::PageMap() : root_tbl(new_table()) {
+  using namespace ::arch::x86_64;
+
+  // Initialize a new root page table. If this is the first (kernel) PageMap,
+  // set up higher-half recursive kernel space; otherwise copy kernel portion.
   if (!kernel_pagemap.valid()) {
-    using namespace ::arch::x86_64;
+    // First (kernel) page map.
     arch::x86_64::max_levels = 4;
 
     if (boot::paging_mode_request.response->mode ==
@@ -194,15 +229,21 @@ PageMap::PageMap() : root_tbl(new_table()) {
 
     arch::x86_64::pml3_available = cpu::test_feature(FEATURE_HUGE_PAGE);
 
+    debug("[ARCH][PAGING] New kernel PageMap: levels=%d 1GiB=%s",
+          arch::x86_64::max_levels,
+          arch::x86_64::pml3_available ? "yes" : "no");
+
     arch::PageTable* tbl = to_higher_half(this->root_tbl);
 
+    // Pre-populate upper-half slots (kernel higher half space) with tables.
     for (int i = MAX_ENTRIES / 2; i < MAX_ENTRIES; ++i) {
       get_next_lvl(tbl->entries[i], true);
     }
   } else {
+    // User / secondary map: copy kernel half so higher-half remains shared.
     arch::PageTable* tbl = to_higher_half(this->root_tbl);
     const auto& kernel_table = to_higher_half(kernel_pagemap->root_tbl);
-
+    debug("[ARCH][PAGING] Cloning kernel higher-half page table entries");
     memcpy(tbl->entries + 256, kernel_table + 256, 256 * sizeof(PageEntry));
   }
 }

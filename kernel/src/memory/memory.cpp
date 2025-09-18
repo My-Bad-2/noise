@@ -8,8 +8,6 @@ void initialize() {
   PhysicalMemoryManager& pmm = PhysicalMemoryManager::instance();
 
   pmm.initialize(boot::memmap_request.response);
-  pmm.print();
-
   initialize_paging(boot::memmap_request.response);
 }
 }  // namespace memory
