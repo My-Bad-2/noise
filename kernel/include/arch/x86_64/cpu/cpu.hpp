@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #define CPUID_BIT(leaf, word, bit)                         \
-  (arch::x86_64::cpu::CpuidBit) {                          \
-    (arch::x86_64::cpu::CpuidLeafNum)(leaf), (word), (bit) \
+  (::arch::x86_64::cpu::CpuidBit) {                          \
+    (::arch::x86_64::cpu::CpuidLeafNum)(leaf), (word), (bit) \
   }
 
 #define FEATURE_SSE3 CPUID_BIT(0x1, 2, 0)

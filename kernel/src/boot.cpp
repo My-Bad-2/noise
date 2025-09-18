@@ -1,4 +1,5 @@
 #include "boot.hpp"
+#include "limine.h"
 
 namespace boot {
 // clang-format off
@@ -31,6 +32,16 @@ volatile limine_executable_address_request address_request = {
   .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
   .revision = 3,
   .response = nullptr,
+};
+
+__attribute__((used)) __attribute__((section(".requests")))
+volatile limine_paging_mode_request paging_mode_request = {
+  .id = LIMINE_PAGING_MODE_REQUEST,
+  .revision = 0,
+  .response = nullptr,
+#ifdef __x86_64__
+  .mode = LIMINE_PAGING_MODE_X86_64_5LVL,
+#endif
 };
 
 __attribute__((used)) __attribute__((section(".requests_start")))

@@ -12,3 +12,5 @@ using ARCH_NAMESPACE_PREFIX::int_switch;
 using ARCH_NAMESPACE_PREFIX::pause;
 using ARCH_NAMESPACE_PREFIX::write;
 }  // namespace arch
+
+#undef ARCH_NAMESPACE_PREFIX
