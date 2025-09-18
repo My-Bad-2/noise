@@ -39,7 +39,7 @@ bool PageMap::map(uintptr_t virt_addr, uintptr_t phys_addr, size_t length,
     return false;
   }
 
-  // const libs::LockGuard guard(this->lock);
+  const libs::LockGuard guard(this->lock);
 
   flags = arch::convert_flags(flags, cache, type);
 
@@ -102,7 +102,7 @@ bool PageMap::unmap(uintptr_t virt_addr, size_t length,
     return false;
   }
 
-  // const libs::LockGuard guard(this->lock);
+  const libs::LockGuard guard(this->lock);
 
   for (size_t i = 0; i < length; i += page_size) {
     const auto ret = get_page_entry(virt_addr + i, type, false);
@@ -177,7 +177,7 @@ bool PageMap::protect(uintptr_t virt_addr, size_t length, size_t flags,
     return false;
   }
 
-  // const libs::LockGuard guard(this->lock);
+  const libs::LockGuard guard(this->lock);
 
   flags = arch::convert_flags(flags, cache, type);
 

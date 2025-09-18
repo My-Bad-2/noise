@@ -77,7 +77,7 @@ void PhysicalMemoryManager::set_page_metadata(uintptr_t base_addr,
 }
 
 void* PhysicalMemoryManager::allocate(size_t bytes, bool clear) {
-  // libs::LockGuard guard(this->lock);
+  libs::LockGuard guard(this->lock);
 
   uint8_t order = this->size_to_order(bytes);
 
@@ -133,7 +133,7 @@ void PhysicalMemoryManager::deallocate(void* ptr) {
     return;
   }
 
-  // libs::LockGuard guard(this->lock);
+  libs::LockGuard guard(this->lock);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
 
@@ -284,7 +284,7 @@ void PhysicalMemoryManager::initialize(
 }
 
 void PhysicalMemoryManager::print() const {
-  // libs::LockGuard guard(this->lock);
+  libs::LockGuard guard(this->lock);
 
   printf("---------- Physical Memory Free Block ----------\n");
   printf("Total Memory: %lu MiB | Free Memory: %lu MiB\n",

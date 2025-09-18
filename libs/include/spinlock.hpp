@@ -32,7 +32,7 @@ class Spinlock<LockType::SpinlockSpin> {
   void lock() {
     size_t ticket = this->next_ticket.fetch_add(1, std::memory_order_relaxed);
 
-    while (serving_ticket.load(std::memory_order_acquire) != ticket) {
+    while (this->serving_ticket.load(std::memory_order_acquire) != ticket) {
       arch::pause();
     }
   }
@@ -42,8 +42,8 @@ class Spinlock<LockType::SpinlockSpin> {
       return false;
     }
 
-    size_t curr = serving_ticket.load(std::memory_order_relaxed);
-    next_ticket.store(curr + 1, std::memory_order_relaxed);
+    size_t curr = this->serving_ticket.load(std::memory_order_relaxed);
+    this->serving_ticket.store(curr + 1, std::memory_order_release);
 
     return true;
   }
