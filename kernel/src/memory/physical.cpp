@@ -94,9 +94,11 @@ void* PhysicalMemoryManager::allocate(size_t bytes, bool clear) {
   uint8_t curr_order = order;
   while (curr_order <= MAX_ORDER) {
     const FreeBlockNode* node = &this->free_lists[curr_order];
+
     if (node->next != node) {
       break;  // Found a suitable block
     }
+
     curr_order++;
   }
 
@@ -201,7 +203,6 @@ void PhysicalMemoryManager::initialize(
   }
 
   // Step 1: Find the highest memory address to determine total size.
-  uintptr_t highest_addr = 0;
   for (size_t i = 0; i < memmap_count; ++i) {
     const limine_memmap_entry* entry = memmap_response->entries[i];
     const uintptr_t top = entry->base + entry->length;
@@ -212,11 +213,11 @@ void PhysicalMemoryManager::initialize(
       continue;
     }
 
-    highest_addr = (highest_addr >= top) ? highest_addr : top;
+    this->highest_addr = (this->highest_addr >= top) ? this->highest_addr : top;
   }
 
   this->total_pages =
-      div_roundup(highest_addr, std::to_underlying(PageSize4KiB));
+      div_roundup(this->highest_addr, std::to_underlying(PageSize4KiB));
   this->total_memory = this->total_pages * PageSize4KiB;
 
   // Step 2: Find a home for the page_metadata array (reserve from a usable
@@ -286,6 +287,7 @@ void PhysicalMemoryManager::initialize(
     }
   }
 
+  debug("Page Metadata address = %p", this->page_metadata);
   info(
       "[PMM][INIT]\n\tHighest Address: 0x%lx\n\t"
       "Total Pages: %lu\n\t"
@@ -293,7 +295,7 @@ void PhysicalMemoryManager::initialize(
       "Metadata Size: %lu KiB\n\t"
       "Metadata VA: %p\n\t"
       "Usable (free) Memory: %lu MiB",
-      highest_addr, this->total_pages, this->total_memory / 1024 / 1024,
+      this->highest_addr, this->total_pages, this->total_memory / 1024 / 1024,
       metadata_size / 1024, this->page_metadata,
       this->usable_memory / 1024 / 1024);
 }

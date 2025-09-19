@@ -75,6 +75,7 @@ void initialize() {
   // CPUID base leaf: discover max base leaf and vendor ID
   __cpuid(0, cpuid[0].a, cpuid[0].b, cpuid[0].c, cpuid[0].d);
   max_cpuid = cpuid[0].a;
+
   if (max_cpuid > MAX_SUPPORTED_CPUID) {
     max_cpuid = MAX_SUPPORTED_CPUID;
   }
@@ -107,9 +108,11 @@ void initialize() {
   __cpuid(CpuidExtBase, cpuid_ext[0].a, cpuid_ext[0].b, cpuid_ext[0].c,
           cpuid_ext[0].d);
   max_ext_cpuid = cpuid_ext[0].a;
+
   if (max_ext_cpuid > MAX_SUPPORTED_CPUID_EXT) {
     max_ext_cpuid = MAX_SUPPORTED_CPUID_EXT;
   }
+
   for (uint32_t i = CpuidExtBase + 1; i < (max_ext_cpuid + 1); ++i) {
     uint32_t index = i - CpuidExtBase;
     __cpuid_count(i, 0, cpuid_ext[index].a, cpuid_ext[index].b,
@@ -120,9 +123,11 @@ void initialize() {
   __cpuid(CpuidHypBase, cpuid_hyp[0].a, cpuid_hyp[0].b, cpuid_hyp[0].c,
           cpuid_hyp[0].d);
   max_hyp_cpuid = cpuid_hyp[0].a;
+
   if (max_hyp_cpuid > MAX_SUPPORTED_CPUID_HYP) {
     max_hyp_cpuid = MAX_SUPPORTED_CPUID_HYP;
   }
+
   for (uint32_t i = CpuidHypBase + 1; i < (max_hyp_cpuid + 1); ++i) {
     uint32_t index = i - CpuidHypBase;
     __cpuid_count(i, 0, cpuid_hyp[index].a, cpuid_hyp[index].b,
@@ -131,6 +136,7 @@ void initialize() {
 
   // Decode model/family/stepping from standard leaf 1 if present
   const CpuidLeaf* leaf = get_leaf(CpuidModelFeatures);
+
   if (leaf != nullptr) {
     model_info.processor_type =
         static_cast<uint8_t>(bits_shift(leaf->a, 13, 12));
@@ -146,6 +152,7 @@ void initialize() {
       model_info.display_family +=
           static_cast<uint8_t>(bits_shift(leaf->a, 27, 20));
     }
+
     // Extended model: add high 4 bits to model (BUGFIX: was adding to family)
     if ((model_info.family == 0xf) || model_info.family == 0x6) {
       model_info.display_model +=

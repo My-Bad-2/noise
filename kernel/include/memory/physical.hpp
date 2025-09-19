@@ -46,6 +46,10 @@ class PhysicalMemoryManager {
     return this->total_memory;
   }
 
+  uintptr_t get_highest_addr() const {
+    return this->highest_addr;
+  }
+
   void* allocate(size_t bytes, bool clear = false);
   void deallocate(void* ptr);
 
@@ -74,6 +78,8 @@ class PhysicalMemoryManager {
   size_t total_memory = 0;
   size_t total_pages = 0;
   size_t usable_memory = 0;
+
+  uintptr_t highest_addr = 0;
 
   mutable libs::SpinLock lock;
 };
