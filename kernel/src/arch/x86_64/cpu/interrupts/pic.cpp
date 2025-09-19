@@ -44,13 +44,13 @@ inline uint16_t get_irq_reg(int ocw3) {
 }  // namespace
 
 void Pic::remap(uint8_t offset1, uint8_t offset2) {
-  // starts the initialization sequence (in cascade mode)
+  // Begin the initialization sequence (cascade mode)
   out<uint8_t>(Pic1Command, Icw1Init | Icw1Icw4);
   io_wait();
   out<uint8_t>(Pic2Command, Icw1Init | Icw1Icw4);
   io_wait();
 
-  // ICW2: Naster PIC vector offset
+  // ICW2: Master PIC vector offset
   out<uint8_t>(Pic1Data, offset1);
   io_wait();
 
@@ -72,10 +72,14 @@ void Pic::remap(uint8_t offset1, uint8_t offset2) {
   out<uint8_t>(Pic2Data, Icw48086);
   io_wait();
 
+#ifdef NOISE_DEBUG
+  debug("[PIC] Remapped: master_offset=0x%x slave_offset=0x%x", offset1, offset2);
+#endif
+
   // Mask all IRQs
   Pic::disable();
 
-  // Clear Mask for Cascade IRQ
+  // Unmask cascade IRQ line so the slave can propagate its IRQs
   Pic::clear_mask(irqCascade);
 }
 

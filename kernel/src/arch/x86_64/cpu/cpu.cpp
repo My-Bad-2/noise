@@ -1,4 +1,5 @@
 #include "arch/x86_64/cpu/cpu.hpp"
+#include "log.hpp"  // debug/info logging
 
 #include <cpuid.h>
 #include <string.h>
@@ -71,10 +72,9 @@ bool test_feature(CpuidBit bit) {
 }
 
 void initialize() {
+  // CPUID base leaf: discover max base leaf and vendor ID
   __cpuid(0, cpuid[0].a, cpuid[0].b, cpuid[0].c, cpuid[0].d);
-
   max_cpuid = cpuid[0].a;
-
   if (max_cpuid > MAX_SUPPORTED_CPUID) {
     max_cpuid = MAX_SUPPORTED_CPUID;
   }
@@ -98,44 +98,39 @@ void initialize() {
     vendor = VendorUnknown;
   }
 
-  for (uint32_t i = (CpuidBase + 1); i < max_cpuid; ++i) {
+  // Enumerate base leaves 1..max_cpuid (inclusive)  [BUGFIX: was '< max_cpuid']
+  for (uint32_t i = (CpuidBase + 1); i <= max_cpuid; ++i) {
     __cpuid(i, cpuid[i].a, cpuid[i].b, cpuid[i].c, cpuid[i].d);
   }
 
+  // Extended CPUID range discovery and enumeration
   __cpuid(CpuidExtBase, cpuid_ext[0].a, cpuid_ext[0].b, cpuid_ext[0].c,
           cpuid_ext[0].d);
-
   max_ext_cpuid = cpuid_ext[0].a;
-
   if (max_ext_cpuid > MAX_SUPPORTED_CPUID_EXT) {
     max_ext_cpuid = MAX_SUPPORTED_CPUID_EXT;
   }
-
   for (uint32_t i = CpuidExtBase + 1; i < (max_ext_cpuid + 1); ++i) {
     uint32_t index = i - CpuidExtBase;
-
     __cpuid_count(i, 0, cpuid_ext[index].a, cpuid_ext[index].b,
                   cpuid_ext[index].c, cpuid_ext[index].d);
   }
 
+  // Hypervisor CPUID range discovery and enumeration
   __cpuid(CpuidHypBase, cpuid_hyp[0].a, cpuid_hyp[0].b, cpuid_hyp[0].c,
           cpuid_hyp[0].d);
-
   max_hyp_cpuid = cpuid_hyp[0].a;
-
   if (max_hyp_cpuid > MAX_SUPPORTED_CPUID_HYP) {
     max_hyp_cpuid = MAX_SUPPORTED_CPUID_HYP;
   }
-
   for (uint32_t i = CpuidHypBase + 1; i < (max_hyp_cpuid + 1); ++i) {
     uint32_t index = i - CpuidHypBase;
-
     __cpuid_count(i, 0, cpuid_hyp[index].a, cpuid_hyp[index].b,
                   cpuid_hyp[index].c, cpuid_hyp[index].d);
   }
 
+  // Decode model/family/stepping from standard leaf 1 if present
   const CpuidLeaf* leaf = get_leaf(CpuidModelFeatures);
-
   if (leaf != nullptr) {
     model_info.processor_type =
         static_cast<uint8_t>(bits_shift(leaf->a, 13, 12));
@@ -146,16 +141,25 @@ void initialize() {
     model_info.display_family = model_info.family;
     model_info.display_model = model_info.model;
 
+    // Extended family
     if (model_info.family == 0xf) {
       model_info.display_family +=
           static_cast<uint8_t>(bits_shift(leaf->a, 27, 20));
     }
-
+    // Extended model: add high 4 bits to model (BUGFIX: was adding to family)
     if ((model_info.family == 0xf) || model_info.family == 0x6) {
-      model_info.display_family +=
+      model_info.display_model +=
           static_cast<uint8_t>(bits_shift(leaf->a, 19, 16) << 4);
     }
   }
+
+  // Log a brief CPU summary
+  info("[CPU] Vendor: %.*s | Max CPUID: base=0x%x ext=0x%x hyp=0x%x",
+       (int)sizeof(vendor_info.vendor_str), vendor_info.vendor_str, max_cpuid,
+       max_ext_cpuid, max_hyp_cpuid);
+  info("[CPU] Family: 0x%x (disp 0x%x) Model: 0x%x (disp 0x%x) Stepping: 0x%x",
+       model_info.family, model_info.display_family, model_info.model,
+       model_info.display_model, model_info.stepping);
 }
 
 ModelInfo get_model_info() {

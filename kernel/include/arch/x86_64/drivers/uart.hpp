@@ -17,15 +17,18 @@ class UartDriver final : public IDriver {
   UartDriver() : IDriver(), m_port(PORT_A) {
   }
 
-  UartDriver(const uint16_t port) : IDriver(), m_port(port) {
+  explicit UartDriver(const uint16_t port) : IDriver(), m_port(port) {
   }
 
+  // Initialize UART (baud, line control, FIFOs, modem ctrl).
   bool initialize() override;
   void shutdown() override;
 
+  // Transmit a single byte (blocking until TX empty).
   void putchar(uint8_t ch) const;
 
-  constexpr void set_port(const uint16_t port) {
+  // Change I/O port at runtime.
+  void set_port(const uint16_t port) noexcept {
     this->m_port = port;
   }
 

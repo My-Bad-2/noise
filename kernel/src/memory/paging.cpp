@@ -10,12 +10,14 @@ libs::Lazy<PageMap> kernel_pagemap;
 arch::PageTable* new_table() {
   PhysicalMemoryManager& instance = PhysicalMemoryManager::instance();
   auto* tbl = instance.allocate<arch::PageTable*>(sizeof(arch::PageTable));
-  // debug("[PG][ALLOC] New page table @ 0x%lx", reinterpret_cast<uintptr_t>(tbl));
+  // debug("[PG][ALLOC] New page table @ 0x%lx",
+  // reinterpret_cast<uintptr_t>(tbl));
   return tbl;
 }
 
 // Descend or allocate next paging level for an entry.
-// Returns higher-half pointer to the child table or nullptr if missing and !allocate.
+// Returns higher-half pointer to the child table or nullptr if missing and
+// allocate.
 arch::PageTable* get_next_lvl(PageEntry& entry, bool allocate) {
   arch::PageTable* tbl = nullptr;
 
@@ -23,6 +25,7 @@ arch::PageTable* get_next_lvl(PageEntry& entry, bool allocate) {
     if (!allocate) {
       return nullptr;
     }
+
     // Allocate and install a new intermediate table.
     entry.clear();
     entry.set(reinterpret_cast<uintptr_t>(tbl = new_table()));
@@ -31,6 +34,7 @@ arch::PageTable* get_next_lvl(PageEntry& entry, bool allocate) {
     // Reuse existing table.
     tbl = reinterpret_cast<arch::PageTable*>(entry.get());
   }
+
   return to_higher_half(tbl);
 }
 
@@ -41,8 +45,8 @@ bool PageMap::map(uintptr_t virt_addr, uintptr_t phys_addr, size_t length,
   const PageSize page_size = arch::from_type(type);
 
   if ((virt_addr % page_size) || (phys_addr % page_size)) {
-    err("[PG][MAP] Alignment error virt=0x%lx phys=0x%lx size=0x%lx",
-        virt_addr, phys_addr, page_size);
+    err("[PG][MAP] Alignment error virt=0x%lx phys=0x%lx size=0x%lx", virt_addr,
+        phys_addr, page_size);
     return false;
   }
 
@@ -56,13 +60,16 @@ bool PageMap::map(uintptr_t virt_addr, uintptr_t phys_addr, size_t length,
       // Rollback already-created entries for this call.
       for (size_t j = 0; j < i; j += page_size) {
         ret = get_page_entry(virt_addr + j, type, true);
+
         if (!ret.has_value()) {
           return false;
         }
+
         PageEntry& entry = ret.value().get();
         entry.clear();
         this->invalidate_page(virt_addr + j);
       }
+
       return false;
     }
 
@@ -72,9 +79,11 @@ bool PageMap::map(uintptr_t virt_addr, uintptr_t phys_addr, size_t length,
     entry.set(flags, true);
   }
 
-  debug("[PG][MAP] virt=0x%lx -> phys=0x%lx len=0x%lx pages=%zu ps=%zu flags=0x%lx",
-        virt_addr, phys_addr, length, length / page_size,
-        static_cast<size_t>(page_size), flags);
+  debug(
+      "[PG][MAP] virt=0x%lx -> phys=0x%lx len=0x%lx pages=%zu ps=%zu "
+      "flags=0x%lx",
+      virt_addr, phys_addr, length, length / page_size,
+      static_cast<size_t>(page_size), flags);
   return true;
 }
 
@@ -86,18 +95,20 @@ bool PageMap::map(uintptr_t virt_addr, size_t length, size_t flags,
   const PageSize page_size = arch::from_type(type);
 
   if (virt_addr % page_size) {
-    err("[PG][MAP-AUTO] Alignment error virt=0x%lx size=0x%lx",
-        virt_addr, page_size);
+    err("[PG][MAP-AUTO] Alignment error virt=0x%lx size=0x%lx", virt_addr,
+        page_size);
     return false;
   }
 
   for (size_t i = 0; i < length; i += page_size) {
     const uintptr_t phys_addr = instance.allocate<uintptr_t>(page_size, true);
+
     if (!map(virt_addr + i, phys_addr, page_size, flags, type, cache)) {
       instance.deallocate(phys_addr);
       return false;
     }
   }
+
   debug("[PG][MAP-AUTO] virt=0x%lx len=0x%lx pages=%zu ps=%zu flags=0x%lx",
         virt_addr, length, length / page_size, static_cast<size_t>(page_size),
         flags);
@@ -111,8 +122,8 @@ bool PageMap::unmap(uintptr_t virt_addr, size_t length,
   const PageSize page_size = arch::from_type(type);
 
   if (virt_addr % page_size) {
-    err("[PG][UNMAP] Alignment error virt=0x%lx size=0x%lx",
-        virt_addr, page_size);
+    err("[PG][UNMAP] Alignment error virt=0x%lx size=0x%lx", virt_addr,
+        page_size);
     return false;
   }
 
@@ -120,9 +131,11 @@ bool PageMap::unmap(uintptr_t virt_addr, size_t length,
 
   for (size_t i = 0; i < length; i += page_size) {
     const auto ret = get_page_entry(virt_addr + i, type, false);
+
     if (!ret.has_value()) {
       return false;
     }
+
     PageEntry& entry = ret.value().get();
     entry.clear();
     this->invalidate_page(virt_addr + i);
@@ -142,8 +155,8 @@ bool PageMap::unmap_dealloc(uintptr_t virt_addr, size_t length,
   const PageSize page_size = arch::from_type(type);
 
   if (virt_addr % page_size) {
-    err("[PG][UNMAP-DEL] Alignment error virt=0x%lx size=0x%lx",
-        virt_addr, page_size);
+    err("[PG][UNMAP-DEL] Alignment error virt=0x%lx size=0x%lx", virt_addr,
+        page_size);
     return false;
   }
 
@@ -152,14 +165,16 @@ bool PageMap::unmap_dealloc(uintptr_t virt_addr, size_t length,
     if (!phys_addr.has_value()) {
       return false;
     }
+
     if (!unmap(virt_addr + i, page_size, type)) {
       return false;
     }
+
     instance.deallocate(phys_addr.value());
   }
 
-  debug("[PG][UNMAP-DEL] virt=0x%lx len=0x%lx pages=%zu",
-        virt_addr, length, length / page_size);
+  debug("[PG][UNMAP-DEL] virt=0x%lx len=0x%lx pages=%zu", virt_addr, length,
+        length / page_size);
   return true;
 }
 
@@ -170,15 +185,17 @@ std::optional<uintptr_t> PageMap::translate(uintptr_t virt_addr,
   const PageSize page_size = arch::from_type(type);
 
   if (virt_addr % page_size) {
-    err("[PG][XLATE] Alignment error virt=0x%lx size=0x%lx",
-        virt_addr, page_size);
+    err("[PG][XLATE] Alignment error virt=0x%lx size=0x%lx", virt_addr,
+        page_size);
     return std::nullopt;
   }
 
   const auto ret = get_page_entry(virt_addr, type, false);
+
   if (!ret.has_value()) {
     return std::nullopt;
   }
+
   return ret.value().get().get();
 }
 
@@ -189,8 +206,8 @@ bool PageMap::protect(uintptr_t virt_addr, size_t length, size_t flags,
   const PageSize page_size = arch::from_type(type);
 
   if (virt_addr % page_size) {
-    err("[PG][PROTECT] Alignment error virt=0x%lx size=0x%lx",
-        virt_addr, page_size);
+    err("[PG][PROTECT] Alignment error virt=0x%lx size=0x%lx", virt_addr,
+        page_size);
     return false;
   }
 
@@ -200,9 +217,11 @@ bool PageMap::protect(uintptr_t virt_addr, size_t length, size_t flags,
 
   for (size_t i = 0; i < length; i += page_size) {
     const auto ret = get_page_entry(virt_addr + i, type, false);
+
     if (!ret.has_value()) {
       return false;
     }
+
     PageEntry& entry = ret.value().get();
     entry.clear_flags();
     entry.set(flags, true);
@@ -229,8 +248,8 @@ void initialize_paging(limine_memmap_response* memmap_response) {
     const limine_memmap_entry* memmap = memmap_response->entries[i];
     const size_t type = memmap->type;
 
-    debug("[PG-INIT][RAW] idx=%zu type=%lu base=0x%lx len=0x%lx",
-          i, type, memmap->base, memmap->length);
+    debug("[PG-INIT][RAW] idx=%zu type=%lu base=0x%lx len=0x%lx", i, type,
+          memmap->base, memmap->length);
 
     if (type != LIMINE_MEMMAP_USABLE &&
         type != LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE &&
@@ -264,9 +283,11 @@ void initialize_paging(limine_memmap_response* memmap_response) {
 
     const uintptr_t virt_addr = to_higher_half(base);
 
-    debug("[PG-INIT][ALIGN] idx=%zu base=0x%lx top=0x%lx len=0x%lx ps=0x%lx ps_type=%d cache=%d virt=0x%lx",
-          i, base, top, length, page_size, static_cast<int>(ps_type),
-          static_cast<int>(cache), virt_addr);
+    debug(
+        "[PG-INIT][ALIGN] idx=%zu base=0x%lx top=0x%lx len=0x%lx ps=0x%lx "
+        "ps_type=%d cache=%d virt=0x%lx",
+        i, base, top, length, page_size, static_cast<int>(ps_type),
+        static_cast<int>(cache), virt_addr);
 
     if (!kernel_pagemap->map(virt_addr, base, length, FlagRw, ps_type, cache)) {
       panic("[PG-INIT] Map failure virt=0x%lx len=0x%lx", virt_addr, length);
@@ -285,17 +306,19 @@ void initialize_paging(limine_memmap_response* memmap_response) {
   for (size_t i = 0; i < kernel_size; i += PageSize4KiB) {
     if (!kernel_pagemap->map(virt_base + i, phys_base + i, PageSize4KiB,
                              FlagRwx)) {
-      panic("[PG-INIT] Kernel image map failed at virt=0x%lx",
-            virt_base + i);
+      panic("[PG-INIT] Kernel image map failed at virt=0x%lx", virt_base + i);
     }
     ++kernel_pages;
   }
 
-  debug("[PG-INIT][KERNEL] phys_base=0x%lx virt_base=0x%lx size=0x%lx pages=%zu",
-        phys_base, virt_base, kernel_size, kernel_pages);
+  debug(
+      "[PG-INIT][KERNEL] phys_base=0x%lx virt_base=0x%lx size=0x%lx pages=%zu",
+      phys_base, virt_base, kernel_size, kernel_pages);
 
   kernel_pagemap->load();
-  debug("[INFO][PG-INIT] Completed: regions_considered=%zu regions_mapped=%zu bytes_mapped=0x%lx kernel_pages=%zu",
-        regions_considered, regions_mapped, bytes_mapped, kernel_pages);
+  debug(
+      "[INFO][PG-INIT] Completed: regions_considered=%zu regions_mapped=%zu "
+      "bytes_mapped=0x%lx kernel_pages=%zu",
+      regions_considered, regions_mapped, bytes_mapped, kernel_pages);
 }
 }  // namespace memory

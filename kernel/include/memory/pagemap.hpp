@@ -54,8 +54,10 @@ struct PageEntry {
   inline void clear() noexcept {
     val = 0;
   }
+
+  // Clear only flag bits, keep physical address intact
   inline void clear_flags() noexcept {
-    val &= ~page_mask;
+    val &= page_mask;
   }
 
   inline void set(uintptr_t flags, bool enabled) noexcept {
@@ -66,9 +68,10 @@ struct PageEntry {
     }
   }
 
+  // Set physical address (flags preserved)
   inline void set(uintptr_t addr) noexcept {
-    val &= ~page_mask;
-    val |= (addr & page_mask);
+    val &= ~page_mask;          // clear current address
+    val |= (addr & page_mask);  // set new address
   }
 
   [[nodiscard]] inline bool get(uintptr_t flag) const noexcept {

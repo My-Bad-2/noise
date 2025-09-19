@@ -11,8 +11,8 @@
 
 namespace memory::arch::x86_64 {
 namespace {
-bool pml3_available =
-    false;           // CPU supports 1GiB pages (PDPT / PML3 huge pages)
+// CPU supports 1GiB pages (PDPT / PML3 huge pages)
+bool pml3_available = false;
 int max_levels = 0;  // 4 or 5 level paging
 }  // namespace
 
@@ -23,7 +23,6 @@ PageSize from_type(PageSizeType type) noexcept {
       return PageSize1GiB;
     case PageMedium:
       return PageSize2MiB;
-    case PageSmall:
     default:
       return PageSize4KiB;
   }

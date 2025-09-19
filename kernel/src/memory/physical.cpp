@@ -13,6 +13,7 @@ PhysicalMemoryManager& PhysicalMemoryManager::instance() {
   return pmm_instance;
 }
 
+// Compute smallest order (2^order pages) that can satisfy 'size' bytes.
 uint8_t PhysicalMemoryManager::size_to_order(size_t size) const {
   if (size == 0) {
     size = 1;
@@ -24,12 +25,13 @@ uint8_t PhysicalMemoryManager::size_to_order(size_t size) const {
     return 0;
   }
 
-  auto ret = sizeof(long long) * 8 - __builtin_clzll(num_pages - 1);
+  size_t ret = sizeof(long long) * 8 - __builtin_clzll(num_pages - 1);
 
   return ret;
 }
 
 void PhysicalMemoryManager::insert_block(uintptr_t addr, uint8_t order) {
+  // Insert a block at 'addr' (phys) into the free list of 'order'.
   FreeBlockNode* node = reinterpret_cast<FreeBlockNode*>(to_higher_half(addr));
 
   node->next = this->free_lists[order].next;
@@ -43,6 +45,7 @@ void PhysicalMemoryManager::insert_block(uintptr_t addr, uint8_t order) {
 }
 
 void PhysicalMemoryManager::remove_block(uintptr_t addr, uint8_t order) {
+  // Remove the block at 'addr' from the free list of 'order'.
   FreeBlockNode* node = reinterpret_cast<FreeBlockNode*>(to_higher_half(addr));
 
   node->prev->next = node->next;
@@ -51,12 +54,14 @@ void PhysicalMemoryManager::remove_block(uintptr_t addr, uint8_t order) {
 
 uintptr_t PhysicalMemoryManager::get_buddy_address(uintptr_t addr,
                                                    uint8_t order) {
+  // Buddy address differs by the block size of this order.
   size_t block_size = PageSize4KiB << order;
   return addr ^ block_size;
 }
 
 void PhysicalMemoryManager::set_page_metadata(uintptr_t base_addr,
                                               uint8_t order, bool is_free) {
+  // Mark '1 << order' pages starting at 'base_addr' as free/used.
   size_t num_pages = (1 << order);
   size_t start_page_idx = base_addr / std::to_underlying(PageSize4KiB);
 
@@ -77,39 +82,36 @@ void PhysicalMemoryManager::set_page_metadata(uintptr_t base_addr,
 }
 
 void* PhysicalMemoryManager::allocate(size_t bytes, bool clear) {
+  // Allocate a block large enough to cover 'bytes'. Optionally zero.
   libs::LockGuard guard(this->lock);
 
   uint8_t order = this->size_to_order(bytes);
-
   if (order > MAX_ORDER) {
-    err("Requested byte size 0x%lx is too large", bytes);
+    err("[PMM][ALLOC] Request too large: bytes=0x%lx order=%u", bytes, order);
     return nullptr;
   }
 
   uint8_t curr_order = order;
-
   while (curr_order <= MAX_ORDER) {
     const FreeBlockNode* node = &this->free_lists[curr_order];
-
     if (node->next != node) {
-      // Found a suitable block
-      break;
+      break;  // Found a suitable block
     }
-
     curr_order++;
   }
 
   if (curr_order > MAX_ORDER) {
-    panic("Out of Memory!");
+    panic("[PMM][ALLOC] Out of memory (request=0x%lx)", bytes);
     return nullptr;
   }
 
+  // const size_t before_free = this->usable_memory;
   FreeBlockNode* block_node = this->free_lists[curr_order].next;
   uintptr_t block_addr =
       reinterpret_cast<uintptr_t>(from_higher_half(block_node));
   this->remove_block(block_addr, curr_order);
 
-  // Split the block down until it's the correct size
+  // Split down to requested order; buddies go back to their free lists.
   while (curr_order > order) {
     curr_order--;
     uintptr_t buddy_addr = get_buddy_address(block_addr, curr_order);
@@ -120,15 +122,19 @@ void* PhysicalMemoryManager::allocate(size_t bytes, bool clear) {
   this->usable_memory -= (PageSize4KiB << order);
 
   void* ret = reinterpret_cast<void*>(block_addr);
-
   if (clear) {
     memset(ret, 0, bytes);
   }
 
+  // debug(
+  // "[PMM][ALLOC] bytes=0x%lx order=%u addr=0x%lx free_before=0x%lx "
+  // "free_after=0x%lx",
+  // bytes, order, block_addr, before_free, this->usable_memory);
   return ret;
 }
 
 void PhysicalMemoryManager::deallocate(void* ptr) {
+  // Free a previously allocated block, coalescing with free buddies.
   if (ptr == nullptr) {
     return;
   }
@@ -136,55 +142,66 @@ void PhysicalMemoryManager::deallocate(void* ptr) {
   libs::LockGuard guard(this->lock);
 
   uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+  const size_t page_bytes = std::to_underlying(PageSize4KiB);
 
-  if (!is_aligned(addr, std::to_underlying(PageSize4KiB))) {
-    err("Address %p is not aligned to the page", ptr);
+  if (!is_aligned(addr, page_bytes)) {
+    err("[PMM][FREE] Address %p is not page-aligned", ptr);
     return;
   }
 
-  size_t page_idx = addr / PageSize4KiB;
+  const size_t page_idx = addr / page_bytes;
 
-  // The order of the block being freed is stored in its first page's metadata
+  // The order of the block being freed is stored in its first page's metadata.
   uint8_t order = this->page_metadata[page_idx].order;
+  const uint8_t orig_order = order;
+  // const size_t before_free = this->usable_memory;
 
-  // Coalesce (merge) with buddies
+  // Coalesce (merge) with buddies while possible.
   while (order < MAX_ORDER) {
-    uintptr_t buddy_addr = this->get_buddy_address(addr, order);
-    size_t buddy_page_idx = buddy_addr / PageSize4KiB;
+    const uintptr_t buddy_addr = this->get_buddy_address(addr, order);
+    const size_t buddy_page_idx = buddy_addr / page_bytes;
 
-    // Check if buddy is within bounds, is free, and has the same order
+    // Check if buddy is within bounds, is free, and has the same order.
     if ((buddy_page_idx >= this->total_pages) ||
         !this->page_metadata[buddy_page_idx].is_free ||
         (this->page_metadata[buddy_page_idx].order != order)) {
-      // Buddy is not available for merging
-      break;
+      break;  // Buddy not mergeable
     }
 
-    // Buddy is available, merge them
+    // Buddy is available: remove it from free list and merge.
     this->remove_block(buddy_addr, order);
 
-    // The merged block starts at the lower address
+    // Merged block starts at the lower address.
     addr = (addr <= buddy_addr) ? addr : buddy_addr;
     order++;
   }
 
+  // Insert (possibly merged) block back into free lists.
   this->insert_block(addr, order);
-  this->usable_memory += (PageSize4KiB << order);
+
+  // Important: Increase free memory only by the size of the originally freed
+  // block. The buddies we removed were already counted in usable_memory.
+  this->usable_memory += (PageSize4KiB << orig_order);
+
+  // debug(
+  // "[PMM][FREE] addr=0x%lx orig_order=%u final_order=%u free_before=0x%lx "
+  // "free_after=0x%lx",
+  // reinterpret_cast<uintptr_t>(ptr), orig_order, order, before_free,
+  // this->usable_memory);
 }
 
 void PhysicalMemoryManager::initialize(
     limine_memmap_response* memmap_response) {
   const size_t memmap_count = memmap_response->entry_count;
 
-  // Initialize all free lists to be empty (pointing to themselves)
-  for (int i = 0; i < MAX_ORDER; ++i) {
+  // Initialize all free lists (sentinel nodes point to themselves).
+  for (int i = MIN_ORDER; i <= MAX_ORDER; ++i) {
     FreeBlockNode* node = &this->free_lists[i];
     node->next = node->prev = node;
   }
 
-  // Step 1: Find the highest memory address to determine total size
+  // Step 1: Find the highest memory address to determine total size.
   uintptr_t highest_addr = 0;
-
   for (size_t i = 0; i < memmap_count; ++i) {
     const limine_memmap_entry* entry = memmap_response->entries[i];
     const uintptr_t top = entry->base + entry->length;
@@ -202,7 +219,8 @@ void PhysicalMemoryManager::initialize(
       div_roundup(highest_addr, std::to_underlying(PageSize4KiB));
   this->total_memory = this->total_pages * PageSize4KiB;
 
-  // Step 2: Find a home for the page_metadata arry
+  // Step 2: Find a home for the page_metadata array (reserve from a usable
+  // region).
   size_t metadata_size = align_up(total_pages * sizeof(PageMetadata),
                                   std::to_underlying(PageSize4KiB));
 
@@ -214,8 +232,7 @@ void PhysicalMemoryManager::initialize(
       this->page_metadata =
           reinterpret_cast<PageMetadata*>(to_higher_half(entry->base));
 
-      // We must now treat this region as reserved. We do this by adjusting the
-      // entry itself.
+      // Reserve the space by adjusting the entry itself.
       entry->base += metadata_size;
       entry->length -= metadata_size;
       break;
@@ -223,13 +240,13 @@ void PhysicalMemoryManager::initialize(
   }
 
   if (this->page_metadata == nullptr) {
-    panic("No space for physical page metadata");
+    panic("[PMM][INIT] No space for physical page metadata");
   }
 
-  // Step 3: Initialize all metadata to "used" as a fail-safe
+  // Step 3: Initialize all metadata to "used" as a fail-safe.
   memset(this->page_metadata, 0, total_pages * sizeof(PageMetadata));
 
-  // Step 4: Free all usable memory regions
+  // Step 4: Free all usable memory regions.
   for (size_t i = 0; i < memmap_count; ++i) {
     limine_memmap_entry* entry = memmap_response->entries[i];
 
@@ -243,28 +260,24 @@ void PhysicalMemoryManager::initialize(
         continue;
       }
 
-      // Greedily add memory chunks to the free lists
+      // Greedily add memory chunks to the free lists.
       uintptr_t curr_addr = start;
 
       while (curr_addr < end) {
         size_t remaining_bytes = end - curr_addr;
         uint8_t order = MAX_ORDER;
 
-        // Find the largest possible block size that fits and is naturally
-        // aligned
+        // Find the largest order that fits and is naturally aligned.
         while (order > MIN_ORDER) {
           const size_t block_size = PageSize4KiB << order;
-
           if ((block_size <= remaining_bytes) &&
               is_aligned(curr_addr, block_size)) {
             break;
           }
-
           order--;
         }
 
         const size_t block_size = (PageSize4KiB << order);
-
         this->insert_block(curr_addr, order);
         this->usable_memory += block_size;
 
@@ -274,13 +287,15 @@ void PhysicalMemoryManager::initialize(
   }
 
   info(
-      "\n\tHighest Address: 0x%lx\n\t"
+      "[PMM][INIT]\n\tHighest Address: 0x%lx\n\t"
       "Total Pages: %lu\n\t"
       "Total Memory: %lu MiB\n\t"
       "Metadata Size: %lu KiB\n\t"
-      "Metadata is stored at: %p",
+      "Metadata VA: %p\n\t"
+      "Usable (free) Memory: %lu MiB",
       highest_addr, this->total_pages, this->total_memory / 1024 / 1024,
-      metadata_size / 1024, this->page_metadata);
+      metadata_size / 1024, this->page_metadata,
+      this->usable_memory / 1024 / 1024);
 }
 
 void PhysicalMemoryManager::print() const {
@@ -297,7 +312,7 @@ void PhysicalMemoryManager::print() const {
     const FreeBlockNode* curr = head->next;
 
     if (curr == head) {
-      // Skip Empty lists
+      // Skip empty lists
       continue;
     }
 

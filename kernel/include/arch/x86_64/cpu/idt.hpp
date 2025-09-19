@@ -18,8 +18,10 @@ struct IdtSegment {
  public:
   constexpr IdtSegment() = default;
 
+  // base: ISR address, ist: 1..7 or 0, attributes: gate type|DPL|P, selector:
+  // code segment selector
   constexpr IdtSegment(uintptr_t base, uint8_t ist, uint8_t attributes,
-                       uint8_t selector)
+                       uint16_t selector)
       : base_low(base & 0xffff),
         selector(selector),
         ist(ist),
@@ -33,7 +35,6 @@ struct IdtSegment {
     uintptr_t val = this->base_low;
     val |= (static_cast<uintptr_t>(this->base_mid) << 16);
     val |= (static_cast<uintptr_t>(this->base_high) << 32);
-
     return val;
   }
 
@@ -41,7 +42,7 @@ struct IdtSegment {
     return this->type_attributes;
   }
 
-  constexpr uint8_t get_selector() const {
+  constexpr uint16_t get_selector() const {
     return this->selector;
   }
 
@@ -56,7 +57,7 @@ struct IdtSegment {
   uint8_t type_attributes;
   uint16_t base_mid;
   uint32_t base_high;
-  uint32_t rsvd;
+  [[maybe_unused]] uint32_t rsvd;
 } __attribute__((packed));
 
 struct IdtTable {
@@ -90,6 +91,7 @@ class Idt {
   IdtTable table;
 };
 
+// Helper to signal End-Of-Interrupt to the PIC/APIC.
 void send_eoi(uint8_t vector);
 }  // namespace arch::x86_64::cpu
 

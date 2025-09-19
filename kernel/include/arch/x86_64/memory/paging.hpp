@@ -41,8 +41,15 @@ void initialize();
 namespace memory {
 namespace arch {
 struct PageTable {
+  // 512 entries, each 8 bytes on x86_64 -> 4096-byte page-sized table
   PageEntry entries[MAX_ENTRIES];
 };
+
+static_assert(sizeof(PageEntry) == 8, "x86_64 PTE must be 8 bytes");
+static_assert(sizeof(PageTable) == MAX_ENTRIES * sizeof(PageEntry),
+              "PageTable must be exactly one page (4096 bytes)");
+static_assert(alignof(PageTable) == alignof(PageEntry),
+              "PageTable alignment should match PageEntry");
 
 constexpr size_t is_valid_flags = x86_64::PtPresent;
 constexpr size_t new_table_flags =
