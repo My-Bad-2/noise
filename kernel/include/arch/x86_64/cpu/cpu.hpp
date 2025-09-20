@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define CPUID_BIT(leaf, word, bit)                         \
+#define CPUID_BIT(leaf, word, bit)                           \
   (::arch::x86_64::cpu::CpuidBit) {                          \
     (::arch::x86_64::cpu::CpuidLeafNum)(leaf), (word), (bit) \
   }
@@ -177,6 +177,24 @@ inline void write_cr3(uintptr_t addr) {
   asm volatile("mov %0, %%cr3" ::"r"(addr) : "memory");
 }
 
+inline uint64_t read_msr(uint32_t msr_id) {
+  uint32_t val_lo = 0;
+  uint32_t val_hi = 0;
+  asm volatile("rdmsr" : "=a"(val_lo), "=d"(val_hi) : "c"(msr_id));
+  return (static_cast<uint64_t>(val_hi) << 32) | val_lo;
+}
+
+inline uint32_t read_msr32(uint32_t msr_id) {
+  uint32_t val = 0;
+  asm volatile("rdmsr" : "=a"(val) : "c"(msr_id) : "rdx");
+  return val;
+}
+
+inline void write_msr(uint32_t msr_id, uint64_t val) {
+  asm volatile("wrmsr" ::"c"(msr_id), "a"(val & 0xffffffff), "d"(val >> 32));
+}
+
+void enable_pat();
 bool test_feature(CpuidBit bit);
 ModelInfo get_model_info();
 void initialize();

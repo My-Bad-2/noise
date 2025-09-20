@@ -6,11 +6,26 @@
 
 #include <bits/feats.h>
 
+#include "arch/x86_64/registers.h"
+
 #define MAX_SUPPORTED_CPUID (0x17)
 #define MAX_SUPPORTED_CPUID_HYP (0x40000001)
 #define MAX_SUPPORTED_CPUID_EXT (0x8000001e)
 
 namespace arch::x86_64::cpu {
+enum PatTypes : size_t {
+  Uncached = 0x00,
+  WriteCombining = 0x01,
+  WriteThrough = 0x04,
+  WriteProtected = 0x05,
+  WriteBack = 0x06,
+  WeaklyUncached = 0x07,
+};
+
+constexpr inline uint64_t pat_state =
+    (WriteCombining << 40) | (WriteProtected << 32) | (Uncached << 24) |
+    (WeaklyUncached << 16) | (WriteThrough << 8) | WriteBack;
+
 namespace {
 CpuidLeaf cpuid[MAX_SUPPORTED_CPUID + 1];
 CpuidLeaf cpuid_ext[MAX_SUPPORTED_CPUID_EXT - CpuidExtBase + 1];
@@ -160,6 +175,8 @@ void initialize() {
     }
   }
 
+  enable_pat();
+
   // Log a brief CPU summary
   info("[CPU] Vendor: %.*s | Max CPUID: base=0x%x ext=0x%x hyp=0x%x",
        (int)sizeof(vendor_info.vendor_str), vendor_info.vendor_str, max_cpuid,
@@ -171,5 +188,9 @@ void initialize() {
 
 ModelInfo get_model_info() {
   return model_info;
+}
+
+void enable_pat() {
+  write_msr(MSR_PAT, pat_state);
 }
 }  // namespace arch::x86_64::cpu
